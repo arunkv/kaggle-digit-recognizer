@@ -33,21 +33,24 @@ def load_training_data(file_name):
 
     return X_data, y_data
 
-X_data, y_data = load_training_data(train_file)
-split=int(len(X_data)*0.8)
-X_train, y_train = X_data[:split], y_data[:split]
-X_test, y_test = X_data[split:], y_data[split:]
+print("Loading training data")
+X_train, y_train = load_training_data(train_file)
 
 
 # Build a new model
 model = Sequential()
-model.add(Conv2D(filters=16, kernel_size=2, padding='same', activation='relu', input_shape=(image_size, image_size, 1)))
+model.add(Conv2D(filters=16, kernel_size=3, padding='same', activation='relu', input_shape=(image_size, image_size, 1)))
+model.add(Conv2D(filters=16, kernel_size=3, padding='same', activation='relu'))
+model.add(Dropout(0.1))
 model.add(MaxPooling2D(pool_size=2))
-model.add(Conv2D(filters=32, kernel_size=2, padding='same', activation='relu'))
+model.add(Conv2D(filters=32, kernel_size=3, padding='same', activation='relu'))
+model.add(Conv2D(filters=32, kernel_size=3, padding='same', activation='relu'))
 model.add(MaxPooling2D(pool_size=2))
-model.add(Conv2D(filters=64, kernel_size=2, padding='same', activation='relu'))
-model.add(GlobalAveragePooling2D())
+model.add(Dropout(0.2))
+model.add(Conv2D(filters=64, kernel_size=3, padding='same', activation='relu'))
+model.add(Conv2D(filters=64, kernel_size=3, padding='same', activation='relu'))
 model.add(Dropout(0.3))
+model.add(GlobalAveragePooling2D())
 model.add(Dense(500, activation='relu'))
 model.add(Dropout(0.4))
 model.add(Dense(10, activation='softmax'))
@@ -61,16 +64,9 @@ model_json = model.to_json()
 with open(model_file, 'w') as json_file:
     json_file.write(model_json)
 
-
 # train the model
-model.load_weights(model_weights_file)
+#model.load_weights(model_weights_file)
 checkpointer = ModelCheckpoint(filepath=model_weights_file, verbose=1, save_best_only=True)
 stopper = EarlyStopping(monitor='val_loss', min_delta=1e-4, patience=10, verbose=1, mode='auto')
-hist = model.fit(X_train, y_train, batch_size=10, epochs=50, validation_split=0.2, callbacks=[checkpointer, stopper], verbose=1, shuffle=True)
+hist = model.fit(X_train, y_train, batch_size=100, epochs=100, validation_split=0.2, callbacks=[checkpointer, stopper], verbose=1, shuffle=True)
 
-# load the weights that yielded the best validation accuracy
-model.load_weights(model_weights_file)
-
-# evaluate training accuracy against test data 
-score = model.evaluate(X_test, y_test, verbose=0)
-print('Accuracy against test data : %.4f%%' % (score[1] * 100))
